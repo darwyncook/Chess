@@ -23,29 +23,37 @@ compatible image.
         self.color = color
         self.directions = directions
         self.max_moves = max_moves
+        self.num_moves = 0
         self.name = name
         self.FEN = FEN
         self.captured = False
-        self.image = ImageTk.PhotoImage(file=image)
+        self.image = None  # ImageTk.PhotoImage(file=image)
 
     def move(self, x, y):
         self.x = x
         self.y = y
+        self.num_moves += 1
 
     def position(self):
         return [self.x, self.y]
 
-    def captured(self):
+    def capture(self):
         self.captured = True
 
-    def pawn(self):
-        if 'pawn' in self.name.upper():
+    def king(self):
+        if 'king' in self.name.lower():
             return True
         else:
             return False
 
-    def king(self):
-        if 'king' in self.name.upper():
+    def rook(self):
+        if 'rook' in self.name.lower():
+            return True
+        else:
+            return False
+
+    def pawn(self):
+        if 'pawn' in self.name.lower():
             return True
         else:
             return False
@@ -92,21 +100,21 @@ class Pieces:
                          [[1, 1], [-1, 1], [-1, -1], [1, -1]],
                          infinity, 'White Bishop', 'BF', 'pieces_image/bwhite.png')
         wpawnA = Piece(1, 0, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PA', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PA', 'pieces_image/pwhite.png')
         wpawnB = Piece(1, 1, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PB', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PB', 'pieces_image/pwhite.png')
         wpawnC = Piece(1, 2, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PC', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PC', 'pieces_image/pwhite.png')
         wpawnD = Piece(1, 3, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PD', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PD', 'pieces_image/pwhite.png')
         wpawnE = Piece(1, 4, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PE', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PE', 'pieces_image/pwhite.png')
         wpawnF = Piece(1, 5, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PF', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PF', 'pieces_image/pwhite.png')
         wpawnG = Piece(1, 6, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PG', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PG', 'pieces_image/pwhite.png')
         wpawnH = Piece(1, 7, 'white',
-                       [[0, 1]], 1, 'White Pawn', 'PH', 'pieces_image/pwhite.png')
+                       [[1, 0]], 1, 'White Pawn', 'PH', 'pieces_image/pwhite.png')
         bking = Piece(7, 3, 'black',
                       [[0, 1], [1, 1], [1, 0], [-1, 1],
                        [-1, 0], [-1, -1], [0, -1], [1, -1]],
@@ -136,21 +144,21 @@ class Pieces:
                          [[1, 1], [-1, 1], [-1, -1], [1, -1]],
                          infinity, 'Black Bishop', 'bF', 'pieces_image/bblack.png')
         bpawnA = Piece(6, 0, 'black',
-                       [[0, -1]], 1, 'Black Pawn', 'pA', 'pieces_image/pblack.png')
+                       [[-1, 0]], 1, 'Black Pawn', 'pA', 'pieces_image/pblack.png')
         bpawnB = Piece(6, 1, 'black',
-                       [[0, -1]], 1, 'Black Pawn', 'pB', 'pieces_image/pblack.png')
+                       [[-1, 0]], 1, 'Black Pawn', 'pB', 'pieces_image/pblack.png')
         bpawnC = Piece(6, 2, 'black',
-                       [[0, -1]], 1, 'Black Pawn', 'pC', 'pieces_image/pblack.png')
+                       [[-1, 0]], 1, 'Black Pawn', 'pC', 'pieces_image/pblack.png')
         bpawnD = Piece(6, 3, 'black',
-                       [[0, -1]], 1, 'Black Pawn', 'pD', 'pieces_image/pblack.png')
+                       [[-1, 0]], 1, 'Black Pawn', 'pD', 'pieces_image/pblack.png')
         bpawnE = Piece(6, 4, 'black',
-                       [[0, -1]], 1, 'Black Pawn', 'pE', 'pieces_image/pblack.png')
+                       [[-1, 0]], 1, 'Black Pawn', 'pE', 'pieces_image/pblack.png')
         bpawnF = Piece(6, 5, 'black',
-                       [[0, -1]], 1, 'Black Pawn', 'pF', 'pieces_image/pblack.png')
+                       [[-1, 0]], 1, 'Black Pawn', 'pF', 'pieces_image/pblack.png')
         bpawnG = Piece(6, 6, 'black',
                        [[0, -1]], 1, 'Black Pawn', 'pG', 'pieces_image/pblack.png')
         bpawnH = Piece(6, 7, 'black',
-                       [[0, -1]], 1, 'Black Pawn', 'pH', 'pieces_image/pblack.png')
+                       [[-1, 0]], 1, 'Black Pawn', 'pH', 'pieces_image/pblack.png')
 
         self.pieces = {'K': wking, 'Q': wqueen, 'RA': wrookA, 'RH': wrookH,
                        'NB': wknightB, 'NG': wknightG, 'BC': wbishopC, 'BF': wbishopF,
@@ -164,7 +172,8 @@ class Pieces:
     def check_move(self, FEN,  x, y):
         if x < 0 or x > 7 or y < 0 or y > 7:
             return False
-        move = [x - self.pieces[FEN].x, y - self.pieces[FEN].y]
+        cp = self.pieces[FEN].position()
+        move = [x - cp[0], y - cp[1]]
         if move == [0, 0]:  # no move
             return True
         elif abs(move[0]) == abs(move[1]):  # diagonal move
@@ -185,29 +194,41 @@ class Pieces:
                 if vector == normalized_move and num_moves <= self.pieces[FEN].max_moves:
                     for piece in self.pieces:
                         if self.pieces[piece].position() == [x, y]\
-                                and self.pieces[FEN].color() == self.pieces[piece].color():
+                                and self.pieces[FEN].color == self.pieces[piece].color:
                             return False
+                        if not self.pieces[FEN].rook():
+                            for i in range(1, num_moves):  # you can't jump another piece
+                                in_between_pos = [cp[0]+i*normalized_move[0], cp[1]+i*normalized_move[1]]
+                                if self.pieces[piece].position() == in_between_pos:
+                                    return False
                     return True
             return False
         # Special cases
         # pawns take diagonally, but not forwards
         elif self.pieces[FEN].pawn():
-            # move without taking
-            if self.pieces[FEN].directions[0] == normalized_move and num_moves == 1:
+            if move[1] == 0:  # move without taking
+                if self.pieces[FEN].num_moves == 0 and num_moves > 2:
+                # On the first move you can move more than one space
+                    return False
+                elif self.pieces[FEN].num_moves != 0 and num_moves > 1:
+                    return False
                 for piece in self.pieces:
-                    if self.pieces[piece].position() == [x,y]:
-                        return False
+                    for i in range(1, num_moves+1):
+                        in_between_pos = [cp[0]+i*normalized_move[0], cp[1]+i*normalized_move[1]]
+                        if self.pieces[piece].position() == in_between_pos:
+                            return False
                 return True
-            # move by taking
-            if self.pieces[FEN].color == 'white':
-                take_moves = [[1, 1], [1, -1]]
-            else:
-                take_moves = [[1, 1], [1, -1]]
-            for piece in self.pieces:
-                if move in take_moves and self.pieces[piece].position() == [x,y]\
-                        and self.pieces[piece].color == self.pieces[piece].opponent():
-                    return True
-            return False
+            else:  # move by taking
+                if self.pieces[FEN].color == 'white':
+                    take_moves = [[1, 1], [1, -1]]
+                else:
+                    take_moves = [[-1, 1], [-1, -1]]
+                for piece in self.pieces:
+                    if move in take_moves and self.pieces[piece].position() == [x, y]\
+                            and self.pieces[piece].color == self.pieces[FEN].opponent():
+                        return True
+                print('b')
+                return False
         else:  # we must be moving a king
             if num_moves == 1:
                 for piece in self.pieces:
@@ -216,26 +237,39 @@ class Pieces:
                             return False  # the king would move into check
                     elif self.pieces[piece].opponent() == self.pieces[FEN].color:
                         other_king_pos = self.pieces[piece].position()
-                        if max(abs(x - other_king_pos[0]),abs(y - other_king_pos)) == 1:
+                        if max(abs(x - other_king_pos[0]), abs(y - other_king_pos)) == 1:
                             return False
                 return True
             else:
                 return False
 
-
     def move(self, FEN, x, y):
-        if self.pieces[FEN].check_move(FEN, x, y):
+        if self.check_move(FEN, x, y):
             self.pieces[FEN].move(x, y)
             for piece in self.pieces:
-                if piece != FEN and self.pieces[piece].position!= [x,y]:
-                    self.pieces[piece].captured()
-                if self.pieces[FEN].pawn:
-                    if self.pieces[FEN].color == 'white' and x == 7 or \
-                       self.pieces[FEN].color == 'black' and x == 0:
-                        self.trade_in_pawn(FEN)
+                if piece != FEN and self.pieces[piece].position() == [x, y]:
+                    self.pieces[piece].capture()
+            if self.pieces[FEN].pawn:
+                if (self.pieces[FEN].color == 'white' and x == 7) or \
+                        (self.pieces[FEN].color == 'black' and x == 0):
+                    self.trade_in_pawn(FEN)
             return True
         else:
             return False
 
     def trade_in_pawn(self, FEN):
-        pass
+        print('trade in pawn', FEN)
+
+
+chess_set = Pieces()
+print(chess_set.move('PA', 3, 0))
+print(chess_set.move('PA', 4, 0))
+print(chess_set.move('PA', 5, 0))
+print(chess_set.move('PA', 6, 1))
+print(chess_set.move('PA', 7, 0))
+print(chess_set.move('RA', 6, 0))
+print(chess_set.move('RA', 6, 1))
+print(chess_set.pieces['pA'].captured)
+print(chess_set.pieces['rA'].captured)
+print(chess_set.pieces['pB'].captured)
+print(chess_set.pieces['rH'].captured)
