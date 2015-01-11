@@ -17,12 +17,12 @@ piece. Captures is whether the piece has been taken or not.
 Image is passed in as a filename and converted to a Tkinter
 compatible image.
     """
-    def __init__(self, x, y, color, directions, max, name, FEN, image):
+    def __init__(self, x, y, color, directions, max_moves, name, FEN, image):
         self.x = x
         self.y = y
         self.color = color
         self.directions = directions
-        self.max_moves = max
+        self.max_moves = max_moves
         self.name = name
         self.FEN = FEN
         self.captured = False
@@ -56,6 +56,7 @@ compatible image.
         else:
             return 'white'
 
+
 #x, y, color, directions, max, name, FEN, image
 class Pieces:
     """ 0,0 is the upper left, white on the left column
@@ -65,16 +66,16 @@ class Pieces:
         wking = Piece(0, 4, 'white',
                       [[0, 1], [1, 1], [1, 0], [-1, 1],
                        [-1, 0], [-1, -1], [0, -1], [1, -1]],
-                       1, 'White King', 'K', 'pieces_image/kwhite.png')
+                        1, 'White King', 'K', 'pieces_image/kwhite.png')
         wqueen = Piece(0, 3, 'white',
                        [[0, 1], [1, 1], [1, 0], [-1, 1],
                        [-1, 0], [-1, -1], [0, -1], [1, -1]],
                        infinity, 'White Queen', 'Q', 'pieces_image/qwhite.png')
         wrookA = Piece(0, 0, 'white',
-                       [[0, 1], [1, 0],[-1, 0], [0, -1]],
+                       [[0, 1], [1, 0], [-1, 0], [0, -1]],
                        infinity, 'White Rook', 'RA', 'pieces_image/rwhite.png')
         wrookH = Piece(0, 7, 'white',
-                       [[0, 1], [1, 0],[-1, 0], [0, -1]],
+                       [[0, 1], [1, 0], [-1, 0], [0, -1]],
                        infinity, 'White Rook', 'RH', 'pieces_image/rwhite.png')
         wknightB = Piece(0, 1, 'white',
                          [[1, 2], [-1, 2], [1, -2], [-1, -2],
@@ -115,10 +116,10 @@ class Pieces:
                        [-1, 0], [-1, -1], [0, -1], [1, -1]],
                        infinity, 'Black Queen', 'q', 'pieces_image/qblack.png')
         brookA = Piece(7, 0, 'black',
-                       [[0, 1], [1, 0],[-1, 0], [0, -1]],
+                       [[0, 1], [1, 0], [-1, 0], [0, -1]],
                        infinity, 'Black Rook', 'rA', 'pieces_image/rblack.png')
         brookH = Piece(7, 7, 'black',
-                       [[0, 1], [1, 0],[-1, 0], [0, -1]],
+                       [[0, 1], [1, 0], [-1, 0], [0, -1]],
                        infinity, 'Black Rook', 'rH', 'pieces_image/rblack.png')
         bknightB = Piece(7, 1, 'black',
                          [[1, 2], [-1, 2], [1, -2], [-1, -2],
@@ -164,15 +165,15 @@ class Pieces:
         if x < 0 or x > 7 or y < 0 or y > 7:
             return False
         move = [x - self.pieces[FEN].x, y - self.pieces[FEN].y]
-        if move == [0,0]: # no move
+        if move == [0, 0]:  # no move
             return True
         elif abs(move[0]) == abs(move[1]):  # diagonal move
             num_moves = abs(move[0])
             normalized_move = [move[0]/num_moves, move[1]/num_moves]
-        elif abs(move[0]) == 0 :   # vertical move
+        elif abs(move[0]) == 0:   # vertical move
             num_moves = abs(move[1])
             normalized_move = [0, move[1]/num_moves]
-        elif abs(move[1]) == 0 :   # horizontal move
+        elif abs(move[1]) == 0:   # horizontal move
             num_moves = abs(move[0])
             normalized_move = [move[0]/num_moves, 0]
         else:  # rook
@@ -183,7 +184,7 @@ class Pieces:
             for vector in self.pieces[FEN].directions:
                 if vector == normalized_move and num_moves <= self.pieces[FEN].max_moves:
                     for piece in self.pieces:
-                        if self.pieces[piece].position() == [x,y]\
+                        if self.pieces[piece].position() == [x, y]\
                                 and self.pieces[FEN].color() == self.pieces[piece].color():
                             return False
                     return True
