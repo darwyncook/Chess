@@ -13,17 +13,8 @@ class Board():
     canvas_height = rows * dim_square
     def __init__(self, parent):
         self.parent = parent
-        self.FEN = StringVar()
-        self.x = StringVar()
-        self.y = StringVar()
         inpt = Frame(self.parent)
         inpt.pack(pady=7, anchor=W)
-        Label(inpt, text='FEN').pack(side=LEFT, anchor=W)
-        Entry(inpt, textvariable=self.FEN).pack(side=LEFT, anchor=W)
-        Label(inpt, text='x').pack(side=LEFT, anchor=W)
-        Entry(inpt, textvariable=self.x).pack(side=LEFT, anchor=W)
-        Label(inpt, text='y').pack(side=LEFT, anchor=W)
-        Entry(inpt, textvariable=self.y).pack(side=LEFT, anchor=W)
         self.checkmate = Label(inpt, text='')
         self.checkmate.pack(fill=X, anchor=W, side=LEFT)
         boardframe = Frame(self.parent)

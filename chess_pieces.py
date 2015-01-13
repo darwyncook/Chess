@@ -82,7 +82,6 @@ compatible image.
             cb += piece.FEN + ' '
         self.chess_board.blackcaptured.itemconfig(self.chess_board.captbwin, text=cb)
         self.chess_board.whitecaptured.itemconfig(self.chess_board.captwwin, text=cw)
-        print("\n" + str(winner) + " captured " + str(self) + " at [" + str(winner.x) + ',' + str(winner.y) + ']' + "\n")
 
     def is_white(self):
         return self.color == 'white'
@@ -394,7 +393,6 @@ class Pieces:
                         Pieces.piece_chosen=piece
                         self.pieces[piece].possible_moves = self.possible_moves(piece)
                         self.draw_board_pm(self.pieces[piece].possible_moves)
-                        print("chose"+piece)
                         return
         else:
             if [row, col] in self.pieces[Pieces.piece_chosen].possible_moves:
@@ -402,6 +400,11 @@ class Pieces:
                 self.draw_board()
                 Pieces.piece_chosen = None
                 return
+            elif [row, col] == self.pieces[Pieces.piece_chosen].position():
+                Pieces.piece_chosen = None
+                self.draw_board()
+            else:
+                pass
 
     def draw_board_pm(self, possible_moves):
         color = self.cb.color1
