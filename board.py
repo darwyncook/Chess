@@ -21,7 +21,7 @@ class Board():
         boardframe.pack()
         self.blackcaptured = Canvas(boardframe, height=Board.canvas_height, width=Board.dim_square, bg='antique white')
         self.blackcaptured.pack(padx=4, side=LEFT)
-        self.canvas = Canvas(boardframe, width=Board.canvas_width, height=Board.canvas_height, bg="grey")
+        self.canvas = Canvas(boardframe, width=Board.canvas_width+2, height=Board.canvas_height+2, bg="grey")
         self.canvas.pack(padx=8, pady=8, ipadx=3, ipady=3, side=LEFT)
         self.whitecaptured = Canvas(boardframe, height=Board.canvas_height, width=Board.dim_square, bg='antique white')
         self.whitecaptured.pack(padx=4, side=LEFT)
@@ -46,20 +46,17 @@ class Board():
         else:
             return Board.color1
 
-    def draw_board(self, highlight=[]):
+    def draw_board(self):
         color = self.color2
         for r in range(self.rows):
             color = self.swap_colors(color)
             for c in range(self.columns):
                 temp = color
-                if [c,7-r] in highlight:
-                    color = "yellow"
                 x1 = (c * self.dim_square)
                 y1 = ((7-r) * self.dim_square)
                 x2 = x1 + self.dim_square
                 y2 = y1 + self.dim_square
-                self.canvas.create_rectangle(x1, y1, x2, y2,
-                fill=color, tags="area")
+                self.canvas.create_rectangle(x2, y1, x2, y2, fill=color)
                 color = temp
                 color = self.swap_colors(color)
 #        image = Image.open("pieces_image/kwhite.png")

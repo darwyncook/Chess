@@ -128,6 +128,8 @@ compatible image.
 class Pieces:
     """ 0,0 is the upper left, white on the left column
     """
+    color_in_check = None
+    last_moved = 'pA'  # FEN of the last piece moved, needs to be initially a black piece
     piece_chosen = None
     def __init__(self, cb):
         infinity = 8
@@ -175,11 +177,11 @@ class Pieces:
                        [[1, 0]], 1, 'White Pawn', 'PG', 'pieces_image/pwhite.png', cb)
         wpawnH = Piece(1, 7, 'white',
                        [[1, 0]], 1, 'White Pawn', 'PH', 'pieces_image/pwhite.png', cb)
-        bking = Piece(7, 3, 'black',
+        bking = Piece(7, 4, 'black',
                       [[0, 1], [1, 1], [1, 0], [-1, 1],
                        [-1, 0], [-1, -1], [0, -1], [1, -1]],
                       1, 'Black King', 'k', 'pieces_image/kblack.png', cb)
-        bqueen = Piece(7, 4, 'black',
+        bqueen = Piece(7, 3, 'black',
                        [[0, 1], [1, 1], [1, 0], [-1, 1],
                        [-1, 0], [-1, -1], [0, -1], [1, -1]],
                        infinity, 'Black Queen', 'q', 'pieces_image/qblack.png', cb)
@@ -246,18 +248,22 @@ class Pieces:
             normalized_move = [move[0]/num_moves, move[1]/num_moves]
         return normalized_move, num_moves
 
-    def check_move(self, FEN,  x, y):
+    def verify_move(self, FEN,  x, y):
+        # If we are in check, and not the king, we need to take the piece putting us in check.
         if x < 0 or x > 7 or y < 0 or y > 7:
             return False
         cp = self.pieces[FEN].position()
         move = [x - cp[0], y - cp[1]]
         if move == [0, 0]:  # no move
-            return True
+            return False
         normalized_move, num_moves = self.normalize_move(move)
  #       print('checking ' + FEN + ' [' + str(x) + ',' + str(y) + '] ' + ' [' + str(cp[0]) + ',' + str(cp[1]) + '] ' + '[' + str(move[0]) + ',' + str(move[1]) + ']' + ' num moves ', str(num_moves))
         if not(self.pieces[FEN].is_pawn() or self.pieces[FEN].is_king()):
             if num_moves > self.pieces[FEN].max_moves:
                 return False
+            if self.pieces[FEN].color == Pieces.color_in_check:  # if we are in check we must take the last piece
+                if self.pieces[Pieces.last_moved] != [x,y]:
+                    return False
             for vector in self.pieces[FEN].directions:
                 if vector == normalized_move:
                     for piece in self.pieces:  # for a move in a possible direction, check to see if anything is
@@ -280,6 +286,8 @@ class Pieces:
                     return False
                 elif self.pieces[FEN].num_moves != 0 and num_moves > 1:
                     return False
+                if self.pieces[FEN].color == Pieces.color_in_check:  # if we are in check we must take the last piece
+                    return False
                 possible_direction_found = False
                 for vector in self.pieces[FEN].directions:
                     if vector == normalized_move:
@@ -294,6 +302,9 @@ class Pieces:
                 else:
                     return False
             else:  # move by taking
+                if self.pieces[FEN].color == Pieces.color_in_check:  # if we are in check we must take the last piece
+                    if self.pieces[Pieces.last_moved] != [x,y]:
+                        return False
                 for piece in self.pieces:
                     if move in self.pieces[FEN].take_moves and self.pieces[piece].position() == [x, y]\
                             and self.pieces[FEN].opponent(self.pieces[piece]):
@@ -304,44 +315,58 @@ class Pieces:
             for vector in self.pieces[FEN].directions:
                 if vector == move:
                     possible_direction_found = True
+#                    print("move", str(move[0]), str(move[1]))
             if possible_direction_found:
                 for piece in self.pieces:
                     if (self.pieces[piece].color == self.pieces[FEN].color) and self.pieces[piece].position() == [x,y]:
+#                        print("  same color piece found"+ piece +str(x)+str(y))
                         return False
-                    if not(self.pieces[piece].is_king()) and self.pieces[piece].opponent(self.pieces[FEN]):
-                        if self.check_move(self.pieces[piece].FEN, x, y):
-                            print('check found' + piece)
-                            return False  # the king would move into check
-                    elif self.pieces[piece].opponent(self.pieces[FEN]):
-                        other_king_pos = self.pieces[piece].position()
-                        if max(abs(x - other_king_pos[0]), abs(y - other_king_pos[1])) == 1:
-                            return False
+                    elif self.pieces[FEN].opponent(self.pieces[piece]):  # are we moving in to check?
+                        if self.pieces[piece].is_king():
+                            other_king_pos = self.pieces[piece].position()
+                            if max(abs(x - other_king_pos[0]), abs(y - other_king_pos[1])) == 1:
+#                                print("  other king found"+ piece +str(x)+str(y))
+                                return False  # We would be in check by the other king
+                        else:
+                            if self.verify_move(self.pieces[piece].FEN, x, y):
+#                                print('  check found' + piece +str(x)+str(y))
+                                return False  # the king would move into check
+
                 return True
             else:
+ #               print("bad direction"+str(x)+str(y) )
                 return False
 
+# If check is in place, it needs to be removed.
+
     def move(self, FEN, x, y):
-        if self.check_move(FEN, x, y) and self.pieces[FEN].is_turn():
+        if self.verify_move(FEN, x, y) and self.pieces[FEN].is_turn():
+ #           if self.in_check(self.pieces[FEN].color) and not self.pieces[FEN].is_king():
+#                if self.pieces[Pieces.last_moved].position() != [x,y]: # if we are in check, we need to take the checkee
+#                    return False
             self.pieces[FEN].move(x, y)
+            Pieces.last_moved = FEN
 #            print(str(self.pieces[FEN]) + 'moved to [' + str(x) + ',' + str(y) + ']')
             for piece in self.pieces:
                 if piece != FEN and self.pieces[piece].position() == [x, y]:
                     self.pieces[piece].capture(self.pieces[FEN])
-            if self.pieces[FEN].is_pawn:
+            if self.pieces[FEN].is_pawn():
                 if (self.pieces[FEN].is_white() and x == 7) or \
                         (self.pieces[FEN].is_black() and x == 0):
                     self.trade_in_pawn(FEN)
-            check = self.check(FEN)
-            if check:
-                checkmate = self.check_mate(self.opponent_king(FEN))
+            if self.in_check(self.pieces[FEN].opposite_color()):
+                checkmate = self.check_mate(self.king(self.pieces[FEN].opposite_color()))
+                Pieces.color_in_check = self.pieces[FEN].opposite_color()
                 if self.pieces[FEN].is_white():
                     clr = 'black'
                 else:
                     clr = 'white'
                 if checkmate:
-                    self.cb.checkmate.config(text=clr + " is in checkmate")
+                    self.cb.checkmate.config(text=clr + " is in checkmate by the " + self.pieces[Pieces.last_moved].name)
                 else:
-                    self.cb.checkmate.config(text=clr + " is in check")
+                    self.cb.checkmate.config(text=clr + " is in check by the " + self.pieces[Pieces.last_moved].name)
+            else:
+                self.cb.checkmate.config(text="")  # Clear previous messages
             self.pieces[FEN].change_sides()
             return True
         else:
@@ -350,34 +375,46 @@ class Pieces:
     def trade_in_pawn(self, FEN):
         print('trade in pawn', FEN)
 
-    def opponent_king(self, FEN):
-        if self.pieces[FEN].is_white():
-            return 'k'
-        else:
+    def king(self, color):
+        if color == 'white':
             return 'K'
+        else:
+            return 'k'
 
-    def check(self, last_moved):
-        opponent_color = self.pieces[last_moved].color
-        FEN = self.opponent_king(last_moved)
-        for piece in self.pieces:
-            if self.pieces[piece].color == opponent_color:
-                if self.check_move(piece, self.pieces[FEN].x, self.pieces[FEN].y):
- #                   print('check', 'opponent color', opponent_color, self.pieces[FEN], self.pieces[piece])
-                    return True
-        return False
+    def in_check(self, color):
+        """
+        :param color is the color of the king you want to check
+        :return:
+        """
+        FEN = self.king(color)
+        kings_position = self.pieces[FEN].position()
+#        for piece in self.pieces:
+#            if self.pieces[FEN].opponent(self.pieces[piece]):
+        if self.verify_move(Pieces.last_moved, kings_position[0], kings_position[1]):
+#                   print('check', 'opponent color', opponent_color, self.pieces[FEN], self.pieces[piece])
+            return True
+        else:
+            return False
+
+# This needs more work. You need to check if one of the other pieces can take the opponent.
 
     def check_mate(self, FEN):
+        """ This is only called if we already know we are in check.
+        """
         x = self.pieces[FEN].position()[0]
         y = self.pieces[FEN].position()[1]
-        return not(self.check_move(FEN, x+1, y) or self.check_move(FEN, x+1, y+1) or self.check_move(FEN, x+1, y-1) or \
-               self.check_move(FEN, x, y+1) or self.check_move(FEN, x, y-1) or \
-               self.check_move(FEN, x-1, y) or self.check_move(FEN, x-1, y+1) or self.check_move(FEN, x-1, y-1))
+        if (self.verify_move(FEN, x+1, y) or self.verify_move(FEN, x+1, y+1) or self.verify_move(FEN, x+1, y-1) or \
+               self.verify_move(FEN, x, y+1) or self.verify_move(FEN, x, y-1) or \
+               self.verify_move(FEN, x-1, y) or self.verify_move(FEN, x-1, y+1) or self.verify_move(FEN, x-1, y-1)):
+            return False
+        else:   #  the king cannot move. The only other possibility is that one of our pieces can take the piece that has us in check.
+            return True
 
     def possible_moves(self, FEN):
         pm = []
         for x in range(8):
             for y in range(8):
-                if self.check_move(FEN, x, y) and [x,y] != self.pieces[FEN].position():
+                if self.verify_move(FEN, x, y) and [x,y] != self.pieces[FEN].position():
                     pm.append([x,y])
         return pm
 
@@ -406,6 +443,13 @@ class Pieces:
             else:
                 pass
 
+    def draw_pieces(self):
+        for piece in self.pieces:
+            p = self.pieces[piece]
+            if not p.captured:
+                self.cb.canvas.create_text(p.x*self.cb.dim_square+self.cb.dim_square / 2,
+                        p.y*self.cb.dim_square+self.cb.dim_square / 2, text=p.FEN)
+
     def draw_board_pm(self, possible_moves):
         color = self.cb.color1
         for x in range(self.cb.rows):
@@ -430,12 +474,7 @@ class Pieces:
         x2 = x1 + self.cb.dim_square
         y2 = y1 + self.cb.dim_square
         self.cb.canvas.create_rectangle(x1, y1, x2, y2, fill=position_color, width=3, tags="area")
-        for piece in self.pieces:
-            p = self.pieces[piece]
-            if not p.captured:
-                self.cb.canvas.create_text(p.x*self.cb.dim_square+self.cb.dim_square / 2,
-                        p.y*self.cb.dim_square+self.cb.dim_square / 2, text=p.FEN)
-
+        self.draw_pieces()
     def draw_board(self):
         color = self.cb.color1
         for x in range(self.cb.rows):
@@ -447,11 +486,6 @@ class Pieces:
                 y2 = y1 + self.cb.dim_square
                 self.cb.canvas.create_rectangle(x1, y1, x2, y2, fill=color, tags="area")
                 color = self.cb.swap_colors(color)
-        for piece in self.pieces:
-            p = self.pieces[piece]
-            if not p.captured:
-                self.cb.canvas.create_text(p.x*self.cb.dim_square+self.cb.dim_square / 2,
-                        p.y*self.cb.dim_square+self.cb.dim_square / 2, text=p.FEN)
-
+        self.draw_pieces()
 #chess_set = Pieces()
 
