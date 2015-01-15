@@ -388,16 +388,18 @@ class Pieces:
                 for piece in self.pieces:
                     if self.pieces[king].opponent(self.pieces[piece]) and not(self.pieces[piece].captured) and \
                                     self.pieces[piece].position() != [x, y]:
+                        # If the piece is at [x,y] we can take it, so we don't worry about those pieces.
+                        # next we test to see if the piece can move to (kx, ky), ie where the king is.
+                        # If the piece is a pawn it must be executing a taking move.
                         if self.verify_move_empty_board(piece, kx, ky) and \
-                                self.verify_not_jumping_another_piece(piece, kx, ky):
+                                self.verify_not_jumping_another_piece(piece, kx, ky) and not(self.pieces[piece].is_pawn()):
                             self.pieces[FEN].x = tempx
                             self.pieces[FEN].y = tempy
                             if captured_piece is not None:
                                 self.pieces[captured_piece].captured = False
                             print(FEN, "blocked by ", piece, x, y)
                             return False
-                        elif self.pieces[piece].is_pawn() and self.verify_pawn_taking(piece, kx, ky) and \
-                                        self.pieces[piece].position() != [x, y]:
+                        elif self.pieces[piece].is_pawn() and self.verify_pawn_taking(piece, kx, ky):
                             self.pieces[FEN].x = tempx
                             self.pieces[FEN].y = tempy
                             if captured_piece is not None:
