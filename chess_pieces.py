@@ -245,7 +245,13 @@ class Pieces:
             normalized_move = [move[0]/num_moves, move[1]/num_moves]
         return normalized_move, num_moves
 
-    def verify_move(self, FEN,  x, y):
+    def verify_move_empty_board(self, FEN, x, y):
+        """
+        :param FEN: Piece we are checking
+        :param x: x coordinate of where we are moving
+        :param y: y coordinate of where we are moving
+        :return: if the piece could move to this point if there were no other pieces present
+        """
         if x < 0 or x > 7 or y < 0 or y > 7:
             return False
         cp = self.pieces[FEN].position()
@@ -253,101 +259,156 @@ class Pieces:
         if move == [0, 0]:  # no move
             return False
         normalized_move, num_moves = self.normalize_move(move)
-        if not(self.pieces[FEN].is_pawn() or self.pieces[FEN].is_king()):
-            if num_moves > self.pieces[FEN].max_moves:
-                return False
-            if self.endanger_king(FEN, x, y):
-                return False
-            if (self.pieces[FEN].color == Pieces.color_in_check and self.can_remove_check(FEN, x, y)) or \
-                    not(self.pieces[FEN].color == Pieces.color_in_check):
-#                print('checking ' + FEN + ' [' + str(x) + ',' + str(y) + '] ' + ' [' + str(cp[0]) + ',' + str(cp[1]) + '] ' + '[' + str(move[0]) + ',' + str(move[1]) + ']' + ' num moves ', str(num_moves))
-                for vector in self.pieces[FEN].directions:
-                    if vector == normalized_move:
-                        for piece in self.pieces:  # for a move in a possible direction, check to see if anything is
-                            if self.pieces[piece].position() == [x, y] and not(self.pieces[piece].captured)\
-                                    and self.pieces[FEN].color == self.pieces[piece].color:  # is already there on our side
-                                return False
-                            if not self.pieces[FEN].is_knight():  # check to see if we are jumping over other pieces,
-                                for i in range(1, num_moves):  # which doesn't apply to knights
-                                    in_between_pos = [cp[0]+i*normalized_move[0], cp[1]+i*normalized_move[1]]
-                                    if self.pieces[piece].position() == in_between_pos and not(self.pieces[piece].captured):
-                                        return False
-                            # If we move will our king be in check?
-                        return True
-            return False
-        # Special cases
-        # pawns take diagonally, but not forwards
-        elif self.pieces[FEN].is_pawn():
-            if self.endanger_king(FEN, x, y):
-                return False
-            if move[1] == 0:  # no vertical movement, a move without taking
-                if self.pieces[FEN].num_moves == 0 and num_moves > 2:
+        if self.pieces[FEN].is_pawn():
+            if self.pieces[FEN].num_moves == 0 and num_moves > 2:
                 # On the first move you can move more than one space
-                    return False
-                elif self.pieces[FEN].num_moves != 0 and num_moves > 1:
-                    return False
-                if Pieces.color_in_check is not None:  # if we are in check we must take the last piece
-                    if not(self.can_remove_check(FEN, x, y)):
-#                        print("crap"+ FEN)
-                        return False
-                possible_direction_found = False
-                for vector in self.pieces[FEN].directions:
-                    if vector == normalized_move:
-                        possible_direction_found = True
-                if possible_direction_found:
-                    for piece in self.pieces:
-                        for i in range(1, num_moves+1):
-                            in_between_pos = [cp[0]+i*normalized_move[0], cp[1]+i*normalized_move[1]]
-                            if self.pieces[piece].position() == in_between_pos and not(self.pieces[piece].captured):
-                                return False
-                    return True
-                else:
-                    return False
-            else:  # move by taking
-                if (self.pieces[FEN].color == Pieces.color_in_check and self.can_remove_check(FEN, x, y)) or \
-                        not(self.pieces[FEN].color == Pieces.color_in_check):
-                    for piece in self.pieces:
-                        if move in self.pieces[FEN].take_moves and self.pieces[piece].position() == [x, y]\
-                                and self.pieces[FEN].opponent(self.pieces[piece]):
-                            return True
                 return False
-        else:  # we must be moving a king
-            possible_direction_found = False
-            for vector in self.pieces[FEN].directions:
-                if vector == move:
-                    possible_direction_found = True
-#                    print("move", str(move[0]), str(move[1]))
-            if possible_direction_found:
-                for piece in self.pieces:
-                    if (self.pieces[piece].color == self.pieces[FEN].color) and self.pieces[piece].position() == [x,y] \
-                            and not(self.pieces[piece].captured):
+            elif self.pieces[FEN].num_moves != 0 and num_moves > 1:
+                return False
+        elif num_moves > self.pieces[FEN].max_moves:
+            return False
+        for vector in self.pieces[FEN].directions:
+            if vector == normalized_move:
+                return True
+        return False
+
+    def verify_no_teammates(self, FEN, x, y):
+        """
+        :param FEN: piece we are trying to move
+        :param x: x coordinate we are trying to move to
+        :param y: y coordinate we are trying to move to
+        :return: true if none of our currently active teammates are at this point, false if one is
+        """
+        for piece in self.pieces:
+            if self.pieces[piece].position() == [x, y] and not(self.pieces[piece].captured):
+                if  self.pieces[FEN].color == self.pieces[piece].color:  # there is piece already there on our side
+                    return False
+                elif self.pieces[FEN].is_pawn() and self.pieces[FEN].opponent(self.pieces[piece]):
+                    return False                                          # pawns cannot take going horizontal
+        return True
+
+    def verify_not_jumping_another_piece(self, FEN, x, y):
+        """
+        :param FEN: piece we are trying to move
+        :param x: x coordinate we are trying to move to
+        :param y: y coordinate we are trying to move to
+        :return: true if we are not going to jump another piece moving to x,y, false otherwise.
+        """
+        if not self.pieces[FEN].is_knight(): # the jump other pieces rule doesn't apply to knights
+            cp = self.pieces[FEN].position()
+            move = [x - cp[0], y - cp[1]]
+            normalized_move, num_moves = self.normalize_move(move)
+            for piece in self.pieces:
+                for i in range(1, num_moves):  # which doesn't apply to knights
+                    in_between_pos = [cp[0]+i*normalized_move[0], cp[1]+i*normalized_move[1]]
+                    if self.pieces[piece].position() == in_between_pos and not(self.pieces[piece].captured):
                         return False
-                    # are we moving in to check?
-                    elif self.pieces[FEN].opponent(self.pieces[piece]) and not(self.pieces[piece].captured):
-                        if self.pieces[piece].is_king():
-                            other_king_pos = self.pieces[piece].position()
-                            if max(abs(x - other_king_pos[0]), abs(y - other_king_pos[1])) == 1:
-                                return False  # We would be in check by the other king
-                        else:
-                            [tempx, tempy] = self.pieces[FEN].position()
-                            self.pieces[FEN].x = x
-                            self.pieces[FEN].y = y
-                            good_move = True
-                            for piece in self.pieces:  # for a move in a possible direction, check to see if anything is
-                                if self.pieces[piece].position() == [x, y] and not(self.pieces[piece].captured)\
-                                    and self.pieces[FEN].color == self.pieces[piece].color:
-                                    good_move = False
-                                elif self.verify_move(piece, x, y) and not(self.pieces[piece].captured):
-                                    good_move = False
+        return True
+
+    def verify_not_putting_own_king_in_check(self, FEN, x, y):
+        """
+        :param FEN: piece we are trying to move
+        :param x: x coordinate we are trying to move to
+        :param y: y coordinate we are trying to move to
+        :return: true if by moving to x,y we do not put our king in check, false otherwise
+        """
+        king = self.king(self.pieces[FEN].color)
+        [kx, ky] = self.pieces[king].position()
+        tempx = self.pieces[FEN].x
+        tempy = self.pieces[FEN].y
+#        if FEN == king:
+#            [kx, ky] = [x,y]
+        self.pieces[FEN].x = x
+        self.pieces[FEN].y = y
+        for piece in self.pieces:
+            if self.pieces[king].opponent(self.pieces[piece]) and self.verify_move_empty_board(piece, kx, ky) and \
+                self.verify_not_jumping_another_piece(piece, kx, ky) and not(self.pieces[piece].captured):
+                self.pieces[FEN].x = tempx
+                self.pieces[FEN].y = tempy
+                return False
+        self.pieces[FEN].x = tempx
+        self.pieces[FEN].y = tempy
+        return True
+
+    def verify_pawn_taking(self, FEN, x, y):
+        """
+            :param FEN: piece we are trying to move
+            :param x: x coordinate we are trying to move to
+            :param y: y coordinate we are trying to move to
+            :return: verify that a pawn is executing a taking move
+        """
+        if self.pieces[FEN].is_pawn():
+            cp = self.pieces[FEN].position()
+            move = [x - cp[0], y - cp[1]]
+            for piece in self.pieces:
+                if move in self.pieces[FEN].take_moves and self.pieces[piece].position() == [x, y]\
+                        and self.pieces[FEN].opponent(self.pieces[piece]) and not(self.pieces[piece].captured):
+                    return True
+        return False
+
+    def verify_move_not_in_check(self, FEN,  x, y):
+        if self.verify_move_empty_board(FEN, x, y) and self.verify_no_teammates(FEN, x, y) and \
+                self.verify_not_jumping_another_piece(FEN, x, y) and self.verify_not_putting_own_king_in_check(FEN, x, y):
+            return True
+        elif self.pieces[FEN].is_pawn() and self.verify_pawn_taking(FEN, x, y) and \
+                self.verify_not_putting_own_king_in_check(FEN, x, y):
+            return True
+        else:
+            return False
+
+    def verify_move(self, FEN, x, y):
+        if self.color_in_check is None:
+            return self.verify_move_not_in_check(FEN, x, y)
+        else:
+            potential_move = False
+            if self.verify_move_empty_board(FEN, x, y) and self.verify_no_teammates(FEN, x, y) and \
+                    self.verify_not_jumping_another_piece(FEN, x, y):
+                potential_move = True
+            elif self.pieces[FEN].is_pawn() and self.verify_pawn_taking(FEN, x, y):
+                potential_move = True
+            if potential_move:
+                king = self.king(self.color_in_check)
+                [kx, ky] = self.pieces[king].position()
+                tempx = self.pieces[FEN].x
+                tempy = self.pieces[FEN].y
+                if king == FEN:
+                    [kx, ky] = [x, y]
+                self.pieces[FEN].x = x
+                self.pieces[FEN].y = y
+                # if there is a piece in the new position on the opposite side we need to capture it.
+                # we just better make sure to release it. Do NOT use the capture method, just set the variable.
+                captured_piece = None
+                for piece in self.pieces:
+                    if self.pieces[FEN].opponent(self.pieces[piece]) and self.pieces[piece].position() == [x, y] and \
+                            not(self.pieces[piece].captured):
+                        if (self.pieces[FEN].is_pawn() and self.verify_pawn_taking(FEN, x, y)) or not(self.pieces[FEN].is_pawn()):
+                            captured_piece = piece
+                            self.pieces[captured_piece].captured = True
+                # if we move to the new position, will anyone be able to take our king?
+                for piece in self.pieces:
+                    if self.pieces[king].opponent(self.pieces[piece]) and not(self.pieces[piece].captured) and \
+                                    self.pieces[piece].position() != [x, y]:
+                        if self.verify_move_empty_board(piece, kx, ky) and \
+                                self.verify_not_jumping_another_piece(piece, kx, ky):
                             self.pieces[FEN].x = tempx
                             self.pieces[FEN].y = tempy
-                            return good_move  # the king would move into check or another player
+                            if captured_piece is not None:
+                                self.pieces[captured_piece].captured = False
+                            print(FEN, "blocked by ", piece, x, y)
+                            return False
+                        elif self.pieces[piece].is_pawn() and self.verify_pawn_taking(piece, kx, ky) and \
+                                        self.pieces[piece].position() != [x, y]:
+                            self.pieces[FEN].x = tempx
+                            self.pieces[FEN].y = tempy
+                            if captured_piece is not None:
+                                self.pieces[captured_piece].captured = False
+                            print(FEN, "blocked by ", piece, x, y)
+                            return False
+                self.pieces[FEN].x = tempx
+                self.pieces[FEN].y = tempy
+                if captured_piece is not None:
+                    self.pieces[captured_piece].captured = False
                 return True
-            else:
- #               print("bad direction"+str(x)+str(y) )
-                return False
-
-# If check is in place, it needs to be removed.
 
     def move(self, FEN, x, y):
         if self.verify_move(FEN, x, y) and self.pieces[FEN].is_turn():
@@ -364,15 +425,16 @@ class Pieces:
             # If we have made a legal move, we must have eliminated any threat of being in check
             Pieces.color_in_check = None
             if self.in_check(self.pieces[FEN].opposite_color()):
-                checkmate = self.check_mate(self.king(self.pieces[FEN].opposite_color()))
                 Pieces.color_in_check = self.pieces[FEN].opposite_color()
+                checkmate = self.check_mate(self.king(self.pieces[FEN].opposite_color()))
                 if self.pieces[FEN].is_white():
                     clr = 'Black'
                 else:
                     clr = 'White'
                 if checkmate:
-                    self.cb.whose_turn.config(text= '')
+                    self.cb.whose_turn.config(text="")
                     self.cb.checkmate.config(text=clr + " is in checkmate by the " + self.pieces[Pieces.last_moved].name.lower())
+                    Pieces.checkmate = True
                 else:
                     self.cb.checkmate.config(text=clr + " is in check by the " + self.pieces[Pieces.last_moved].name.lower())
             else:
@@ -391,18 +453,6 @@ class Pieces:
         else:
             return 'k'
 
-    def endanger_king(self, FEN, x, y):
-        tempx = self.pieces[FEN].x
-        tempy = self.pieces[FEN].y
-        self.pieces[FEN].x = x
-        self.pieces[FEN].y = y
-        endanger = False
-        if self.in_check(self.pieces[FEN].color):
-            endanger = True
-        self.pieces[FEN].x = tempx
-        self.pieces[FEN].y = tempy
-        return endanger
-
     def in_check(self, color):
         """ color is the color of the king you want to check"""
         FEN = self.king(color)
@@ -412,39 +462,18 @@ class Pieces:
     def check_mate(self, king):
         """ This is only called if we already know we are in check.
         """
-        if self.possible_moves(king) != []:
-            return False
-        else:   # the king cannot move.
-            print("king cannot move")
-            for piece in self.pieces:
-                for pos in self.possible_moves(piece):
-                    if self.can_remove_check(piece, pos[0], pos[1]):
-                        return False
-            Pieces.checkmate = True
-            self.cb.whose_turn.config(text= '')
-            return True
+        for piece in self.pieces:
+            if self.pieces[piece].color == self.pieces[king].color and not(self.pieces[piece].captured) and \
+                            self.possible_moves(piece) != []:
+                return False
+        return True
 
-    def can_remove_check(self, FEN, x, y):
-        """ This will check that piece FEN can remove check by moving to position x,y
-        Position x,y must be an already verified position for FEN, otherwise you get into
-        some recursion issues if you try to verify the position in here.
-        """
-        king = self.king(self.pieces[FEN].color)
-        if self.pieces[FEN].color == self.pieces[Pieces.last_moved].opposite_color():
-            if self.pieces[Pieces.last_moved].position() == [x, y]:
-            # Our piece can take the piece that has us in check.
-                return True
-            # or the piece can get in the way if the other piece is not a knight
-            if not(self.pieces[Pieces.last_moved].is_knight()):
-                # the vector between the checkee and our king.
-                vec = [self.pieces[Pieces.last_moved].x-self.pieces[king].x,
-                       self.pieces[Pieces.last_moved].y-self.pieces[king].y]
-                nvec, num_moves = self.normalize_move(vec)
-                for i in range(1, num_moves):
-                    in_between_pos = [i*nvec[0] + self.pieces[king].x, i*nvec[1] + self.pieces[king].y]
-                    if [x,y] == in_between_pos:
-                        return True
-        return False
+    def print_possible_moves(self, FEN):
+        """ For error checking only """
+        pos = self.possible_moves(FEN)
+        print(FEN )
+        for p in pos:
+            print('   [' + str(p[0]) + ',' + str(p[1]) + ']')
 
     def possible_moves(self, FEN):
         pm = []
@@ -462,24 +491,19 @@ class Pieces:
             return
         row = event.x//self.cb.dim_square
         col = event.y//self.cb.dim_square
-
         if Pieces.piece_chosen is None:
             for piece in self.pieces:
                 if (self.pieces[piece].position() == [row, col]) and self.pieces[piece].is_turn() \
                         and not(self.pieces[piece].captured):
                     Pieces.piece_chosen = piece
                     self.pieces[piece].possible_moves = self.possible_moves(piece)
+                    self.print_possible_moves(piece)
                     self.draw_board_pm(self.pieces[piece].possible_moves)
         else:
-            if [row, col] in self.pieces[Pieces.piece_chosen].possible_moves:
+            if [row, col] in self.possible_moves(Pieces.piece_chosen): #self.pieces[Pieces.piece_chosen].possible_moves:
                 self.move(Pieces.piece_chosen, row, col)
-                Pieces.piece_chosen = None
-                self.draw_board()
-            elif [row, col] == self.pieces[Pieces.piece_chosen].position():  # deselect piece
-                Pieces.piece_chosen = None
-                self.draw_board()
-            else:
-                pass
+            Pieces.piece_chosen = None
+            self.draw_board()
 
     def draw_pieces(self):
         self.img = {}
